@@ -1,0 +1,50 @@
+:root {
+    --primary-color: #DC3545;
+    --primary-light: #E57373;
+    --primary-dark: #B71C1C;
+    --white: #FFFFFF;
+    --light-gray: #F8F9FA;
+    --gray: #6C757D;
+    --dark-gray: #343A40;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: var(--light-gray);
+    color: var(--dark-gray);
+}
+
+.btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.1s;
+}
+
+.btn:active {
+    transform: scale(0.98);
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: var(--white);
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-dark);
+}
+
+.input {
+    padding: 10px;
+    border: 1px solid var(--gray);
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
