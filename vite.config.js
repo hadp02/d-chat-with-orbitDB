@@ -9,6 +9,13 @@ export default defineConfig({
       include: ['buffer', 'process', 'events', 'stream', 'util']
     })
   ],
+  css: {
+    preprocessorOptions: {
+      scss: {
+        additionalData: `@import "@fortawesome/fontawesome-free/css/all.css";`
+      }
+    }
+  },
   define: {
     'process.env': {},
     global: 'globalThis',

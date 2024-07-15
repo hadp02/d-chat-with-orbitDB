@@ -1,113 +1,50 @@
 <template>
-  <div class="app-container">
-    <header>
-      <div class="header-left">
-        <button v-if="isLoggedIn" @click="toggleSidebar" class="toggle-sidebar-btn">
-          ☰
-        </button>
-        <h1>OrbitDB Chat App</h1>
+  <div class="app-container" @mousemove="handleMouseMove">
+    <AppHeader :toggleSidebar="toggleSidebar" />
+    <main class="app-main">
+      <Sidebar
+          v-if="isLoggedIn"
+          :isOpen="isSidebarOpen"
+          @close="closeSidebar"
+          @open-profile-modal="openProfileModal"
+          @open-change-password-modal="openChangePasswordModal"
+      />
+      <div class="content-area" :class="{ 'sidebar-open': isSidebarOpen && isLoggedIn }">
+        <template v-if="isLoggedIn">
+          <ChatContainer />
+        </template>
+        <AuthForm v-else @auth-success="onAuthSuccess" />
       </div>
-      <p>Status: {{ chatStore.status }}</p>
-    </header>
-
-    <main>
-      <template v-if="isLoggedIn">
-        <Sidebar :isOpen="isSidebarOpen" @close="closeSidebar" />
-        <ChatContainer />
-      </template>
-      <AuthForm v-else @auth-success="onAuthSuccess" />
     </main>
-
-    <footer>
-      <ErrorDisplay :error="chatStore.error" />
-    </footer>
+    <AppFooter />
+    <ProfileModal v-if="isProfileModalOpen" @close="isProfileModalOpen = false" />
+    <ChangePasswordModal v-if="isChangePasswordModalOpen" @close="isChangePasswordModalOpen = false" />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useUserStore } from './stores/userStore'
-import { useChatStore } from './stores/chatStore'
-import AuthForm from './components/auth/AuthForm.vue'
+import { useAppSetup } from './composables/useAppSetup'
+import Sidebar from './components/layout/Sidebar.vue'
+import AppHeader from './components/layout/AppHeader.vue'
+import AppFooter from './components/layout/AppFooter.vue'
+import AuthForm from './components/auth/AuthContainer.vue'
 import ChatContainer from './components/chat/ChatContainer.vue'
-import ErrorDisplay from './components/common/ErrorDisplay.vue'
-import Sidebar from './components/Sidebar.vue'
+import ProfileModal from './components/modals/ProfileModal.vue'
+import ChangePasswordModal from './components/modals/ChangePasswordModal.vue'
 
-const chatStore = useChatStore()
-const userStore = useUserStore()
-
-const isLoggedIn = computed(() => !!userStore.currentUsername)
-const isSidebarOpen = ref(false)
-
-const toggleSidebar = () => {
-  isSidebarOpen.value = !isSidebarOpen.value
-}
-
-const closeSidebar = () => {
-  isSidebarOpen.value = false
-}
-
-const onAuthSuccess = () => {
-  // This function will be called when authentication is successful
-  console.log('Authentication successful')
-}
-
-onMounted(async () => {
-  await chatStore.initOrbitDB()
-  userStore.setUserDb(chatStore.userDb)
-})
+const {
+  isProfileModalOpen,
+  isChangePasswordModalOpen,
+  isSidebarOpen,
+  isLoggedIn,
+  toggleSidebar,
+  closeSidebar,
+  onAuthSuccess,
+  handleMouseMove,
+  chatStore,
+  openProfileModal,
+  openChangePasswordModal
+} = useAppSetup()
 </script>
 
-<style scoped>
-.app-container {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-}
-
-header {
-  background-color: var(--primary-color);
-  color: var(--white);
-  padding: 10px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-}
-
-.toggle-sidebar-btn {
-  background: none;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-  margin-right: 15px;
-  color: var(--white);
-}
-
-h1 {
-  margin: 0;
-  font-size: 1.5em;
-}
-
-.main-content {
-  display: flex;
-  flex-grow: 1;
-  overflow: hidden;
-  position: relative;
-}
-
-main {
-  flex-grow: 1;
-  overflow-y: auto;
-}
-
-footer {
-  background-color: var(--light-gray);
-  padding: 10px;
-  text-align: center;
-}
-</style>
+<style src="./assets/App.css"></style>

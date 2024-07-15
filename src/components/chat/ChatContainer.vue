@@ -1,13 +1,15 @@
 <template>
   <div class="chat-container">
-    <ChatBox />
+    <ChatHeader />
+    <ChatMessages />
     <MessageInput />
   </div>
 </template>
 
 <script setup>
-import ChatBox from './ChatBox.vue'
-import MessageInput from './MessageInput.vue'
+import ChatHeader from './ChatHeader.vue';
+import ChatMessages from './ChatMessages.vue';
+import MessageInput from './MessageInput.vue';
 </script>
 
 <style scoped>
@@ -15,5 +17,6 @@ import MessageInput from './MessageInput.vue'
   display: flex;
   flex-direction: column;
   height: 100%;
+  background-color: var(--chat-background);
 }
 </style>

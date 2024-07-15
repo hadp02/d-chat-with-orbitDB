@@ -1,144 +1,116 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
-import { loginUser, registerUser, updateUserProfile, changeUserPassword } from '../services/userService'
-import {EventEmitter} from "events";
+import userService from '../services/userService'
 
-export const useUserStore = defineStore('user', () => {
-    const currentUsername = ref(null)
-    const userProfile = ref({
-        name: '',
-        status: 'offline'
-    })
-    const error = ref('')
-    let userDb = null
-
-    const setUserDb = (db) => {
-        userDb = db
-        console.log('UserDB set:', userDb)
-    }
-    const eventEmitter = new EventEmitter()
-
-
-    const login = async (username, password) => {
-        try {
-            console.log('Login attempt for username:', username)
-            const user = await loginUser(userDb, username, password)
-            currentUsername.value = username
-            userProfile.value = {
-                name: user.name || username,
-                status: user.status || 'online'
-            }
-            console.log('Login successful. Current username:', currentUsername.value)
-            console.log('User profile after login:', userProfile.value)
-        } catch (err) {
-            console.error('Login error:', err)
-            error.value = err.message
-            throw err
-        }
-    }
-
-    const register = async (username, password) => {
-        try {
-            console.log('Registration attempt for username:', username)
-            const user = await registerUser(userDb, username, password)
-            currentUsername.value = username
-            userProfile.value = {
-                name: user.name || username,
-                status: 'online'
-            }
-            console.log('Registration successful. Current username:', currentUsername.value)
-            console.log('User profile after registration:', userProfile.value)
-        } catch (err) {
-            console.error('Registration error:', err)
-            error.value = err.message
-            throw err
-        }
-    }
-
-    const logout = () => {
-        currentUsername.value = null
-        userProfile.value = {
+export const useUserStore = defineStore('user', {
+    state: () => ({
+        currentUsername: null,
+        userProfile: {
             name: '',
             status: 'offline'
-        }
-        console.log('User logged out')
-    }
+        },
+        userDb: null,
+    }),
 
-    const updateProfile = async (updatedProfile) => {
-        try {
-            console.log('Updating profile with:', updatedProfile)
+    getters: {
+        isLoggedIn: (state) => !!state.currentUsername
+    },
 
-            if (!currentUsername.value) {
-                throw new Error('No current user found')
-            }
+    actions: {
+        setUserDb(db) {
+            this.userDb = db
+        },
 
-            // Loại bỏ các trường có giá trị undefined
-            const cleanProfile = Object.entries(updatedProfile).reduce((acc, [key, value]) => {
-                if (value !== undefined) {
-                    acc[key] = value;
-                }
-                return acc;
-            }, {});
-
-            const updated = await updateUserProfile(userDb, currentUsername.value, cleanProfile)
-            userProfile.value = {
-                ...userProfile.value,
-                ...updated
-            }
-            console.log('Profile updated successfully:', userProfile.value)
-        } catch (err) {
-            console.error('Error updating profile:', err)
-            error.value = err.message
-            throw err
-        }
-    }
-
-    const getUserProfile = async (username) => {
-        try {
-            if (!userDb) {
-                throw new Error('UserDB not initialized')
-            }
-            const user = await userDb.get(username)
-            if (user) {
-                return {
+        async login(username, password) {
+            try {
+                console.log('Login attempt for username:', username)
+                const user = await userService.loginUser(this.userDb, username, password)
+                this.currentUsername = username
+                this.userProfile = {
                     name: user.name || username,
-                    avatar: user.avatar || `https://api.dicebear.com/6.x/initials/svg?seed=${username}`,
-                    status: user.status || 'offline'
+                    status: user.status || 'online'
                 }
+                console.log('Login successful. Current username:', this.currentUsername)
+                console.log('User profile after login:', this.userProfile)
+            } catch (err) {
+                console.error('Login error:', err)
+                throw err
             }
-            return null
-        } catch (err) {
-            console.error('Error fetching user profile:', err)
-            return null
-        }
-        eventEmitter.emit('profileUpdated', currentUsername.value, updated)
-    }
+        },
 
-
-
-    const changePassword = async (oldPassword, newPassword) => {
-        try {
-            if (!currentUsername.value) {
-                throw new Error('No current user found')
+        async register(username, password) {
+            try {
+                console.log('Registration attempt for username:', username)
+                const user = await userService.registerUser(this.userDb, username, password)
+                this.currentUsername = username
+                this.userProfile = {
+                    name: user.name || username,
+                    status: 'online'
+                }
+                console.log('Registration successful. Current username:', this.currentUsername)
+                console.log('User profile after registration:', this.userProfile)
+            } catch (err) {
+                console.error('Registration error:', err)
+                throw err
             }
-            await changeUserPassword(userDb, currentUsername.value, oldPassword, newPassword)
-        } catch (err) {
-            error.value = err.message
-            throw err
-        }
-    }
+        },
 
-    return {
-        currentUsername,
-        userProfile,
-        error,
-        eventEmitter,
-        setUserDb,
-        login,
-        register,
-        logout,
-        updateProfile,
-        changePassword,
-        getUserProfile
+        logout() {
+            this.currentUsername = null
+            this.userProfile = {
+                name: '',
+                status: 'offline'
+            }
+            console.log('User logged out')
+        },
+
+        async updateProfile(updatedProfile) {
+            try {
+                console.log('Updating profile with:', updatedProfile)
+                if (!this.currentUsername) {
+                    throw new Error('No current user found')
+                }
+                const updated = await userService.updateUserProfile(this.userDb, this.currentUsername, updatedProfile)
+                this.userProfile = {
+                    ...this.userProfile,
+                    ...updated
+                }
+                console.log('Profile updated successfully:', this.userProfile)
+            } catch (err) {
+                console.error('Error updating profile:', err)
+                throw err
+            }
+        },
+
+        async getUserProfile(username) {
+            try {
+                if (!this.userDb) {
+                    throw new Error('UserDB not initialized')
+                }
+                const user = await this.userDb.get(username)
+                if (user) {
+                    return {
+                        name: user.name || username,
+                        avatar: user.avatar || `https://api.dicebear.com/6.x/initials/svg?seed=${username}`,
+                        status: user.status || 'offline'
+                    }
+                }
+                return null
+            } catch (err) {
+                console.error('Error fetching user profile:', err)
+                return null
+            }
+        },
+
+        async changePassword(oldPassword, newPassword) {
+            try {
+                if (!this.currentUsername) {
+                    throw new Error('No current user found')
+                }
+                await userService.changeUserPassword(this.userDb, this.currentUsername, oldPassword, newPassword)
+            } catch (err) {
+                console.error('Error changing password:', err)
+                throw err
+            }
+        }
     }
 })

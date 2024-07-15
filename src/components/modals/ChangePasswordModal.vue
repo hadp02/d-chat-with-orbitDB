@@ -1,5 +1,5 @@
 <template>
-  <div class="modal-overlay">
+  <div class="modal-overlay" @click.self="$emit('close')">
     <div class="modal-content">
       <h2>Change Password</h2>
       <form @submit.prevent="changePassword">
@@ -16,18 +16,17 @@
           <input id="confirmPassword" v-model="confirmPassword" type="password" required />
         </div>
         <div class="button-group">
-          <button type="submit">Change Password</button>
-          <button type="button" @click="$emit('close')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Change Password</button>
+          <button type="button" @click="$emit('close')" class="btn btn-secondary">Cancel</button>
         </div>
       </form>
     </div>
   </div>
 </template>
 
-
 <script setup>
 import { ref } from 'vue'
-import { useUserStore } from '../stores/userStore'
+import { useUserStore } from '../../stores/userStore'
 
 const emit = defineEmits(['close'])
 const userStore = useUserStore()
@@ -67,14 +66,11 @@ const changePassword = async () => {
 }
 
 .modal-content {
-  background-color: var(--white);
+  background-color: white;
   padding: 20px;
   border-radius: 8px;
   width: 300px;
   max-width: 90%;
-  max-height: 90%;
-  overflow-y: auto;
-  z-index: 1001;
 }
 
 .form-group {
@@ -96,26 +92,23 @@ input {
 .button-group {
   display: flex;
   justify-content: space-between;
+  margin-top: 20px;
 }
 
-button {
-  padding: 10px;
-  background-color: var(--primary-color);
-  color: white;
+.btn {
+  padding: 10px 15px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
 }
 
-button:hover {
-  background-color: var(--primary-dark);
+.btn-primary {
+  background-color: var(--primary-color);
+  color: white;
 }
 
-button[type="button"] {
-  background-color: var(--gray);
-}
-
-button[type="button"]:hover {
-  background-color: var(--dark-gray);
+.btn-secondary {
+  background-color: #ccc;
+  color: black;
 }
 </style>

@@ -1,0 +1,90 @@
+/* src/styles/App.css */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body, html {
+    height: 100%;
+    overflow: hidden;
+}
+
+.app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100%;
+    overflow: hidden;
+}
+
+.app-header {
+    background-color: var(--primary-color);
+    color: var(--white);
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 60px;
+    flex-shrink: 0;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+}
+
+.toggle-sidebar-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    margin-right: 15px;
+    color: var(--white);
+}
+
+h1 {
+    margin: 0;
+    font-size: 1.5em;
+}
+
+.app-main {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+}
+
+.content-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: margin-left 0.3s ease;
+}
+
+.content-area.sidebar-open {
+    margin-left: 280px;
+}
+
+.app-footer {
+    background-color: var(--light-gray);
+    padding: 10px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+    .content-area.sidebar-open {
+        margin-left: 0;
+    }
+
+    .app-main {
+        flex-direction: column;
+    }
+
+    .content-area {
+        width: 100%;
+    }
+}

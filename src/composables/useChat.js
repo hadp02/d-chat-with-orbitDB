@@ -1,4 +1,4 @@
-import { ref, watch } from 'vue'
+import {onUnmounted, ref, watch} from 'vue'
 import { useChatStore } from '../stores/chatStore'
 
 export function useChat() {
@@ -8,7 +8,10 @@ export function useChat() {
 
     watch(() => chatStore.currentDb, async (newDb) => {
         if (newDb) {
-            await chatStore.loadMessages()
+            await chatStore.refreshMessages()
+            chatStore.startPolling()
+        } else {
+            chatStore.stopPolling()
         }
     })
 
@@ -19,14 +22,25 @@ export function useChat() {
             newMessage.value = ''
             chatError.value = ''
         } catch (err) {
-            console.error('Error sending message:', err)
             chatError.value = 'Error sending message: ' + err.message
         }
     }
 
+    const loadMoreMessages = async () => {
+        try {
+            await chatStore.loadMoreMessages()
+        } catch (err) {
+            chatError.value = 'Error loading messages: ' + err.message
+        }
+    }
+
+    onUnmounted(() => {
+        chatStore.cleanup()
+    })
     return {
         newMessage,
         chatError,
-        sendMessage
+        sendMessage,
+        loadMoreMessages
     }
 }
