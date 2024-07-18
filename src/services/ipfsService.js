@@ -65,31 +65,9 @@ class IPFSService {
             } else {
                 console.log("ConnectionManager not found");
             }
-
             libp2p.addEventListener('peer:discovery', (evt) => {
                 console.log('Discovered peer:', evt.detail.id ? evt.detail.id.toString() : 'Unknown ID')
             })
-
-            libp2p.addEventListener('peer:connect', (evt) => {
-                const remotePeer = evt.detail.remotePeer;
-                if (remotePeer) {
-                    console.log('Connected to peer:', remotePeer.toString());
-                    console.log('Total connections:', libp2p.connectionManager.connections.size);
-                } else {
-                    console.log('Connected to unknown peer');
-                }
-            });
-            libp2p.addEventListener('peer:disconnect', (evt) => {
-                const remotePeer = evt.detail.remotePeer;
-                console.log('Disconnected from peer:', remotePeer.toString());
-                console.log('Total connections:', libp2p.connectionManager.connections.size);
-            });
-
-            if (connectionManager && typeof connectionManager.addEventListener === 'function') {
-                connectionManager.addEventListener('peer:connect', (evt) => {
-                    console.log('New connection:', evt.detail.remotePeer ? evt.detail.remotePeer.toString() : 'Unknown Peer')
-                })
-            }
 
             // Create Helia instance
             const blockstore = new LevelBlockstore(`${directory}/ipfs/blocks`);
@@ -97,24 +75,18 @@ class IPFSService {
             const ipfs = await createHelia({ libp2p, blockstore, blockBrokers: [bitswap()] });
             console.log("Helia instance created successfully");
             console.log("Pubsub available in libp2p:", !!ipfs.libp2p.pubsub);
-
             console.log("Creating OrbitDB instance...");
-            this.orbitdb = await createOrbitDB({
-                ipfs,
-                id,
-                identity,
-                identities,
-                directory
-            });
+            this.orbitdb = await createOrbitDB({ ipfs, id, identity, identities, directory });
             console.log("OrbitDB instance created successfully");
+            this.setupEventListeners();
+            this.listenForMessages();
+            console.log("Pubsub available in libp2p:", !!this.orbitdb.ipfs.libp2p.services.pubsub);
             console.log("OrbitDB structure:", Object.keys(this.orbitdb));
-
             // Thêm libp2p vào OrbitDB instance nếu cần
             if (!this.orbitdb.libp2p && this.orbitdb.ipfs && this.orbitdb.ipfs.libp2p) {
                 this.orbitdb.libp2p = this.orbitdb.ipfs.libp2p;
                 console.log("libp2p added to OrbitDB instance");
             }
-
             if (this.orbitdb.libp2p) {
                 console.log("libp2p initialized in OrbitDB");
             } else {
@@ -122,12 +94,10 @@ class IPFSService {
                 console.log("ipfs structure:", Object.keys(this.orbitdb.ipfs));
                 console.log("ipfs.libp2p available:", !!this.orbitdb.ipfs.libp2p);
             }
-
             // Thử kết nối đến relay server nếu libp2p được khởi tạo
             if (this.orbitdb.libp2p) {
                 await this.connectToRelay();
             }
-
             return this.orbitdb;
         } catch (error) {
             console.error("Error in initOrbitDB:", error);
@@ -145,29 +115,69 @@ class IPFSService {
         }
     }
 
+    isInitialized() {
+        return !!(this.orbitdb && this.orbitdb.ipfs && this.orbitdb.ipfs.libp2p);
+    }
+
+    setupEventListeners() {
+        if (this.orbitdb && this.orbitdb.ipfs && this.orbitdb.ipfs.libp2p) {
+            this.orbitdb.ipfs.libp2p.addEventListener('peer:connect', (evt) => {
+                const remotePeer = evt.detail.remotePeer;
+                if (remotePeer) {
+                    console.log('Connected to peer:', remotePeer.toString());
+                    console.log('Total connections:', this.orbitdb.ipfs.libp2p.connectionManager.connections.size);
+                } else {
+                    console.log('Connected to unknown peer');
+                }
+            });
+
+            this.orbitdb.ipfs.libp2p.addEventListener('peer:disconnect', (evt) => {
+                const remotePeer = evt.detail.remotePeer;
+                if (remotePeer) {
+                    console.log('Disconnected from peer:', remotePeer.toString());
+                    console.log('Total connections:', this.orbitdb.ipfs.libp2p.connectionManager.connections.size);
+                } else {
+                    console.log('Disconnected from unknown peer');
+                }
+            });
+            console.log('Event listeners set up successfully');
+        } else {
+            console.error('OrbitDB, IPFS, or libp2p not initialized');
+        }
+    }
+
     async connectToRelay() {
+        if (!this.isInitialized()) {
+            console.error('OrbitDB, IPFS, or libp2p not initialized');
+            return;
+        }
         const relayAddress = '/ip4/127.0.0.1/tcp/60734/ws/p2p/12D3KooWSuZ9Jqsu9Z25AaR9yNuooLtpENYR2vWsh8vQXmqCFLe4'
         try {
             console.log(`Dialing relay server at ${relayAddress}`)
-            if (!this.orbitdb || !this.orbitdb.libp2p) {
-                throw new Error('OrbitDB or libp2p not initialized')
-            }
-            const multiAddr = multiaddr(relayAddress)
-            await this.orbitdb.libp2p.dial(multiAddr)
+            const ma = multiaddr(relayAddress)
+            await this.orbitdb.ipfs.libp2p.dial(ma)
             console.log('Connected to relay server')
+
+            // Đăng ký với relay server
+            await this.orbitdb.ipfs.libp2p.services.dcutr.start()
+            console.log('Registered with relay server')
         } catch (error) {
             console.error('Failed to connect to relay server:', error)
+            console.error('Error details:', error.message)
+            if (error.stack) {
+                console.error('Error stack:', error.stack)
+            }
         }
     }
 
     async subscribeToTopic(topic, callback) {
-        if (!this.orbitdb || !this.orbitdb.ipfs || !this.orbitdb.ipfs.libp2p || !this.orbitdb.ipfs.libp2p.pubsub) {
+        if (!this.orbitdb || !this.orbitdb.ipfs || !this.orbitdb.ipfs.libp2p || !this.orbitdb.ipfs.libp2p.services.pubsub) {
             console.error('OrbitDB, IPFS, libp2p or pubsub not initialized');
             return;
         }
-        await this.orbitdb.ipfs.libp2p.pubsub.subscribe(topic);
+        await this.orbitdb.ipfs.libp2p.services.pubsub.subscribe(topic);
         console.log(`Subscribed to topic: ${topic}`);
-        this.orbitdb.ipfs.libp2p.pubsub.addEventListener('message', (evt) => {
+        this.orbitdb.ipfs.libp2p.services.pubsub.addEventListener('message', (evt) => {
             if (evt.detail.topic === topic) {
                 console.log(`Received message on topic ${topic}:`, new TextDecoder().decode(evt.detail.data));
                 callback(evt.detail.data);
@@ -176,12 +186,88 @@ class IPFSService {
     }
 
     async publishToTopic(topic, message) {
-        if (!this.orbitdb || !this.orbitdb.ipfs || !this.orbitdb.ipfs.libp2p || !this.orbitdb.ipfs.libp2p.pubsub) {
+        if (!this.orbitdb || !this.orbitdb.ipfs || !this.orbitdb.ipfs.libp2p || !this.orbitdb.ipfs.libp2p.services.pubsub) {
             console.error('OrbitDB, IPFS, libp2p or pubsub not initialized');
             return;
         }
-        await this.orbitdb.ipfs.libp2p.pubsub.publish(topic, new TextEncoder().encode(message));
+        await this.orbitdb.ipfs.libp2p.services.pubsub.publish(topic, new TextEncoder().encode(message));
         console.log(`Published message to topic ${topic}:`, message);
+    }
+
+    async updatePeerList() {
+        if (!this.orbitdb || !this.orbitdb.ipfs || !this.orbitdb.ipfs.libp2p) {
+            console.error('OrbitDB, IPFS or libp2p not initialized');
+            return [];
+        }
+        const peers = await this.orbitdb.ipfs.libp2p.peerStore.all();
+        return peers.map(peer => peer.id.toString());
+    }
+
+    async dialPeer(multiaddrString) {
+        if (!this.isInitialized()) {
+            console.error('OrbitDB, IPFS, or libp2p not initialized');
+            return null;
+        }
+        try {
+            console.log(`Dialing '${multiaddrString}'`);
+            const ma = multiaddr(multiaddrString);
+            const components = ma.toString().split('/');
+            const peerIdIndex = components.lastIndexOf('p2p') + 1;
+            if (peerIdIndex < components.length) {
+                const peerId = components[peerIdIndex];
+                await this.orbitdb.ipfs.libp2p.dial(peerId);
+                console.log(`Connected to '${peerId}'`);
+            } else {
+                throw new Error('Invalid multiaddr: no peer ID found');
+            }
+        } catch (error) {
+            console.error('Error dialing peer:', error);
+            throw error;
+        }
+    }
+
+    listenForMessages() {
+        if (!this.orbitdb || !this.orbitdb.ipfs || !this.orbitdb.ipfs.libp2p) {
+            console.error('OrbitDB, IPFS or libp2p not initialized');
+            return;
+        }
+        this.orbitdb.ipfs.libp2p.services.pubsub.addEventListener('message', event => {
+            const topic = event.detail.topic;
+            const message = new TextDecoder().decode(event.detail.data);
+            console.log(`Message received on topic '${topic}':`, message);
+        });
+    }
+
+    getOwnMultiaddr() {
+        if (!this.isInitialized()) {
+            console.error('OrbitDB, IPFS, or libp2p not initialized');
+            return null;
+        }
+
+        const peerId = this.orbitdb.ipfs.libp2p.peerId.toString();
+        const addresses = this.orbitdb.ipfs.libp2p.getMultiaddrs();
+
+        // Ưu tiên địa chỉ WebRTC nếu có
+        const webrtcAddr = addresses.find(addr => addr.toString().includes('/webrtc/'));
+        if (webrtcAddr) {
+            return `${webrtcAddr}/p2p/${peerId}`;
+        }
+
+        // Nếu không có WebRTC, sử dụng địa chỉ đầu tiên
+        if (addresses.length > 0) {
+            return `${addresses[0]}/p2p/${peerId}`;
+        }
+
+        return null;
+    }
+
+    async getConnectedPeers() {
+        if (!this.isInitialized()) {
+            console.error('OrbitDB, IPFS, or libp2p not initialized');
+            return [];
+        }
+        const peers = await this.orbitdb.ipfs.libp2p.peerStore.all();
+        return peers.map(peer => peer.id.toString());
     }
 
     async listConnectedPeers() {

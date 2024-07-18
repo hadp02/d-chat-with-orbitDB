@@ -26,13 +26,14 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import {computed, ref, watch} from 'vue';
 import { useChatStore } from '../../stores/chatStore.js';
 import BaseButton from '../common/BaseButton.vue';
 
 const chatStore = useChatStore();
 
 const localDbAddress = ref(chatStore.dbAddress);
+const dbAddress = computed(() => chatStore.dbAddress);
 
 watch(() => chatStore.dbAddress, (newValue) => {
   localDbAddress.value = newValue;

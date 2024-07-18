@@ -12,6 +12,7 @@
       <div class="content-area" :class="{ 'sidebar-open': isSidebarOpen && isLoggedIn }">
         <template v-if="isLoggedIn">
           <ChatContainer />
+<!--          <PeerConnection />-->
         </template>
         <AuthForm v-else @auth-success="onAuthSuccess" />
       </div>
@@ -31,6 +32,7 @@ import AuthForm from './components/auth/AuthContainer.vue'
 import ChatContainer from './components/chat/ChatContainer.vue'
 import ProfileModal from './components/modals/ProfileModal.vue'
 import ChangePasswordModal from './components/modals/ChangePasswordModal.vue'
+import PeerConnection from './components/PeerConnection.vue'
 
 const {
   isProfileModalOpen,

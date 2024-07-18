@@ -102,8 +102,8 @@ export const useChatStore = defineStore('chat', () => {
     }
 
     async function testPeerCommunication() {
-        if (!ipfsService.orbitdb || !ipfsService.orbitdb.ipfs || !ipfsService.orbitdb.ipfs.libp2p || !ipfsService.orbitdb.ipfs.libp2p.pubsub) {
-            console.error('OrbitDB, IPFS, libp2p or pubsub not initialized in ipfsService');
+        if (!ipfsService.orbitdb || !ipfsService.orbitdb.ipfs || !ipfsService.orbitdb.ipfs.libp2p) {
+            console.error('OrbitDB, IPFS or libp2p not initialized in ipfsService');
             return;
         }
 
@@ -111,12 +111,8 @@ export const useChatStore = defineStore('chat', () => {
         const testMessage = `Hello from ${ipfsService.orbitdb.id} at ${new Date().toISOString()}`;
 
         try {
-            await ipfsService.subscribeToTopic(testTopic, (data) => {
-                console.log('Received test message:', new TextDecoder().decode(data));
-            });
-
+            await ipfsService.subscribeToTopic(testTopic);
             await ipfsService.publishToTopic(testTopic, testMessage);
-
             console.log('Test message sent. Check other browser for reception.');
         } catch (error) {
             console.error('Error in testPeerCommunication:', error);
