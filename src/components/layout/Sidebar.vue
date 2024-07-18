@@ -203,6 +203,4 @@ aside {
   opacity: 0;
 }
 
-/* Ensure Font Awesome is loaded */
-@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css');
 </style>

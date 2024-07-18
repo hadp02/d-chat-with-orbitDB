@@ -82,6 +82,7 @@ h1 {
 
     .app-main {
         flex-direction: column;
+        overflow: scroll;
     }
 
     .content-area {
