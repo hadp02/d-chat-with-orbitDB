@@ -1,6 +1,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useUserStore } from '../stores/userStore'
 import { useChatStore } from '../stores/chatStore'
+import IpfsService from "../services/ipfsService.js";
 
 export function useAppSetup() {
     const userStore = useUserStore()
@@ -59,6 +60,7 @@ export function useAppSetup() {
     onUnmounted(() => {
         window.removeEventListener('resize', handleResize)
         chatStore.cleanup()
+        IpfsService.stopOrbitDB();
     })
 
     return {

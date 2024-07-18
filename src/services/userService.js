@@ -5,16 +5,21 @@ const saltRounds = 10;
 class UserService {
     async loginUser(userDb, username, password) {
         console.log('Attempting to fetch user from DB:', username);
-        const user = await userDb.get(username);
-        console.log('User found in DB:', user);
-        if (!user) {
-            throw new Error('Invalid username or password');
+        try {
+            const user = await userDb.get(username);
+            console.log('User found in DB:', user ? 'User exists' : 'User not found');
+            if (!user) {
+                throw new Error('Invalid username or password');
+            }
+            const isMatch = await bcrypt.compare(password, user.password);
+            if (!isMatch) {
+                throw new Error('Invalid username or password');
+            }
+            return { username: user.username, name: user.name, status: user.status };
+        } catch (error) {
+            console.error('Error during login:', error);
+            throw error;
         }
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            throw new Error('Invalid username or password');
-        }
-        return { username: user.username, name: user.name, status: user.status };
     }
 
     async registerUser(userDb, username, password) {
@@ -33,6 +38,18 @@ class UserService {
         await userDb.put(username, newUser);
         console.log('New user registered:', newUser);
         return { username: newUser.username, name: newUser.name, status: newUser.status };
+    }
+
+    async createSampleUser(userDb, username, password) {
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
+        const newUser = {
+            username,
+            password: hashedPassword,
+            name: username,
+            status: 'online'
+        };
+        await userDb.put(username, newUser);
+        console.log('Sample user created:', username);
     }
 
     async updateUserProfile(userDb, username, updatedProfile) {

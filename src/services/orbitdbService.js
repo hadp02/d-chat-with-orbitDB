@@ -17,12 +17,16 @@ class OrbitDBService {
 
     async openDatabase(name) {
         if (!this.orbitdb) {
+            console.error('OrbitDB not initialized');
             throw new Error('OrbitDB not initialized');
         }
-        return await this.orbitdb.open(name, {
+        console.log('Opening database:', name);
+        const db = await this.orbitdb.open(name, {
             type: 'keyvalue',
             AccessController: IPFSAccessController({ write: ['*'] })
         });
+        console.log('Database opened:', db ? 'Success' : 'Failed');
+        return db;
     }
 
     async parseMessage(entry) {
@@ -31,6 +35,27 @@ class OrbitDBService {
             return messageService.parseMessage(payload.key, payload.value)
         }
         return null
+    }
+
+    async subscribeToTopic(topic, callback) {
+        if (!this.orbitdb || !this.orbitdb.libp2p || !this.orbitdb.libp2p.pubsub) {
+            console.error('OrbitDB, libp2p, or pubsub not initialized');
+            return;
+        }
+        this.orbitdb.libp2p.pubsub.subscribe(topic)
+        this.orbitdb.libp2p.pubsub.addEventListener('message', (evt) => {
+            if (evt.detail.topic === topic) {
+                callback(evt.detail.data)
+            }
+        })
+    }
+
+    async publishToTopic(topic, message) {
+        if (!this.orbitdb || !this.orbitdb.libp2p || !this.orbitdb.libp2p.pubsub) {
+            console.error('OrbitDB, libp2p, or pubsub not initialized');
+            return;
+        }
+        await this.orbitdb.libp2p.pubsub.publish(topic, message)
     }
 
     async connectToDatabase(address) {
@@ -56,6 +81,28 @@ class OrbitDBService {
 
     setOrbitDB(orbitdb) {
         this.orbitdb = orbitdb;
+        console.log("OrbitDB set in OrbitDBService:", !!this.orbitdb);
+        if (this.orbitdb && this.orbitdb.ipfs && this.orbitdb.ipfs.libp2p) {
+            console.log("libp2p available in OrbitDBService");
+            this.libp2p = this.orbitdb.ipfs.libp2p;
+
+            // Add event listeners for peer discovery and connection
+            this.libp2p.addEventListener('peer:discovery', (evt) => {
+                console.log('Discovered peer:', evt.detail.id.toString());
+            });
+
+            this.libp2p.addEventListener('peer:connect', (evt) => {
+                const remotePeer = evt.detail.remotePeer;
+                console.log('Connected to peer:', remotePeer.toString());
+                console.log('Peer details:', {
+                    id: remotePeer.id.toString(),
+                    protocols: remotePeer.protocols,
+                    addresses: remotePeer.addresses.map(addr => addr.toString())
+                });
+            });
+        } else {
+            console.error("libp2p not available in OrbitDBService");
+        }
     }
 }
 

@@ -6,15 +6,12 @@ export default defineConfig({
   plugins: [
     vue(),
     nodePolyfills({
-      include: ['buffer', 'process', 'events', 'stream', 'util']
+      include: ['buffer', 'process', 'events', 'stream', 'util','os', 'net', 'tls', 'crypto']
     })
   ],
-  css: {
-    preprocessorOptions: {
-      scss: {
-        additionalData: `@import "@fortawesome/fontawesome-free/css/all.css";`
-      }
-    }
+  server: {
+    port: 5173,
+    strictPort: true,
   },
   define: {
     'process.env': {},

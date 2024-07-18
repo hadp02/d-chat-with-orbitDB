@@ -2,9 +2,10 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import ipfsService from '../services/ipfsService'
 import orbitDBService from '../services/orbitdbService'
+import userService from "../services/userService.js";
 
 export const useChatStore = defineStore('chat', () => {
-    const dbAddress = ref('/orbitdb/zdpuApB2Tnkz9y28HBmeMgqYHBKKxGVPVH8cKRDYpmLGoQHqm')
+    const dbAddress = ref(null)
     const status = ref('Initializing...')
     const error = ref('')
     const messages = ref([])
@@ -34,35 +35,54 @@ export const useChatStore = defineStore('chat', () => {
 
     async function initOrbitDB() {
         try {
-            status.value = 'Initializing IPFS...'
-            const orbitdb = await ipfsService.initOrbitDB()
-            orbitDBService.setOrbitDB(orbitdb)
-            await connectToUserDb()
-            await connectToMainDb()
-            status.value = 'OrbitDB initialized and Connected to Default dbAddress. You can create a new DB or connect to an existing one.'
+            status.value = 'Initializing IPFS...';
+            await ipfsService.initOrbitDB();
+            console.log("OrbitDB initialized in chatStore:", !!ipfsService.orbitdb);
+            if (ipfsService.orbitdb && ipfsService.orbitdb.ipfs) {
+                console.log("IPFS available in OrbitDB");
+                console.log("libp2p available in IPFS:", !!ipfsService.orbitdb.ipfs.libp2p);
+            }
+            orbitDBService.setOrbitDB(ipfsService.orbitdb);
+            await connectToUserDb();
+            await connectToMainDb();
+            await ipfsService.listConnectedPeers();
+            ipfsService.checkOrbitDBStatus();
+            await testPeerCommunication();
+            status.value = 'OrbitDB initialized and Connected to Default dbAddress. You can create a new DB or connect to an existing one.';
         } catch (err) {
-            handleError('Error during initialization:', err)
+            handleError('Error during initialization:', err);
+            status.value = 'Initialization failed';
         }
     }
 
     async function connectToUserDb() {
         try {
-            userDb.value = await orbitDBService.openDatabase('user-db')
-            console.log('Connected to user database')
+            console.log('Connecting to user database...');
+            userDb.value = await orbitDBService.openDatabase('user-db');
+            console.log('User database opened:', userDb.value ? 'Success' : 'Failed');
+            console.log('Connected to user database');
+            const userExists = await userDb.value.get('test2');
+            if (!userExists) {
+                await userService.createSampleUser(userDb.value, 'test2', 'password123');
+            }
         } catch (err) {
-            handleError('Error connecting to user database:', err)
+            handleError('Error connecting to user database:', err);
         }
     }
 
     async function connectToMainDb() {
         try {
-            currentDb.value = await orbitDBService.connectToDatabase(dbAddress.value)
-            currentDb.value.events.on("update", async entry => {
+            status.value = 'Connecting to database...'
+            const dbName = 'main-db' // or any other appropriate name
+            if (dbAddress.value !== null || currentDb.value !== null) {
+                currentDb.value = await orbitDBService.connectToDatabase(dbAddress.value || dbName)
+                dbAddress.value = currentDb.value.address.toString()
+                status.value = 'Connected to database'
+                console.log('Connected to database:', currentDb.value.address.toString())
                 await refreshMessages()
-                console.log("Event catch success")
-            })
-            startPolling()
-            await refreshMessages()
+            } else {
+                await createNewDb();
+            }
         } catch (err) {
             handleError('Error connecting to main database:', err)
         }
@@ -80,6 +100,29 @@ export const useChatStore = defineStore('chat', () => {
             handleError('Error creating new database:', err)
         }
     }
+
+    async function testPeerCommunication() {
+        if (!ipfsService.orbitdb || !ipfsService.orbitdb.ipfs || !ipfsService.orbitdb.ipfs.libp2p || !ipfsService.orbitdb.ipfs.libp2p.pubsub) {
+            console.error('OrbitDB, IPFS, libp2p or pubsub not initialized in ipfsService');
+            return;
+        }
+
+        const testTopic = 'test-communication';
+        const testMessage = `Hello from ${ipfsService.orbitdb.id} at ${new Date().toISOString()}`;
+
+        try {
+            await ipfsService.subscribeToTopic(testTopic, (data) => {
+                console.log('Received test message:', new TextDecoder().decode(data));
+            });
+
+            await ipfsService.publishToTopic(testTopic, testMessage);
+
+            console.log('Test message sent. Check other browser for reception.');
+        } catch (error) {
+            console.error('Error in testPeerCommunication:', error);
+        }
+    }
+
 
     async function connectToDb(address) {
         if (!address) {
