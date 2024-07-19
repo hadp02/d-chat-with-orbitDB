@@ -151,7 +151,7 @@ class IPFSService {
             console.error('OrbitDB, IPFS, or libp2p not initialized');
             return;
         }
-        const relayAddress = '/ip4/127.0.0.1/tcp/60734/ws/p2p/12D3KooWSuZ9Jqsu9Z25AaR9yNuooLtpENYR2vWsh8vQXmqCFLe4'
+        const relayAddress =  '/ip4/172.29.113.190/tcp/57591/ws/p2p/12D3KooWK6817XAJhEMTYu3RQfHWGZV8TFF2rmTszekx3wFvmnmy'
         try {
             console.log(`Dialing relay server at ${relayAddress}`)
             const ma = multiaddr(relayAddress)
@@ -360,7 +360,7 @@ class IPFSService {
             peerDiscovery: [
                 bootstrap({
                     list: [
-                        '/ip4/127.0.0.1/tcp/60734/ws/p2p/12D3KooWSuZ9Jqsu9Z25AaR9yNuooLtpENYR2vWsh8vQXmqCFLe4'
+                        ' /ip4/172.29.113.190/tcp/57591/ws/p2p/12D3KooWK6817XAJhEMTYu3RQfHWGZV8TFF2rmTszekx3wFvmnmy'
                     ]
                 })
             ],

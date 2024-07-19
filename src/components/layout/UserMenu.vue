@@ -55,6 +55,7 @@ const handleLogout = () => {
   emit('logout');
   isUserMenuOpen.value = false;
 };
+
 </script>
 
 
